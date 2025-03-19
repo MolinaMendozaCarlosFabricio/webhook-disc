@@ -22,7 +22,7 @@ func HandlePullRequestEvent(ctx *gin.Context) {
 		return
 	}
 
-	var msg, webhookURL string
+	var msg string
 	switch eventType {
 	case "ping":
 		ctx.JSON(http.StatusOK, gin.H{"status": "pong"})
@@ -31,15 +31,13 @@ func HandlePullRequestEvent(ctx *gin.Context) {
 		msg = application.ProcessPullRequestEvent(rawData)
 	case "push":
 		msg = application.ProcessPullRequestEvent(rawData)
-	case "merge":
-		msg = application.ProcessPullRequestEvent(rawData)
 	default:
 		log.Println("Evento no soportado:", eventType)
 		ctx.JSON(http.StatusOK, gin.H{"status": "Evento ignorado"})
 		return
 	}
 
-	webhookURL = os.Getenv("DISCORD_DEV_WEBHOOK_URL")
+	webhookURL := os.Getenv("DISCORD_DEV_WEBHOOK_URL")
 
 	if msg == "ERROR" || webhookURL == "" {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error procesando evento"})
