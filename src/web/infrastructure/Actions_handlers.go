@@ -9,11 +9,16 @@ import (
 	"webhock-disc.com/w/src/web/application"
 )
 
-func HandlePullRequestEvent(ctx *gin.Context) {
+func HandleGithubActionEvent(ctx *gin.Context){
 	eventType := ctx.GetHeader("X-GitHub-Event")
 	deliveryID := ctx.GetHeader("X-GitHub-Delivery")
 
 	log.Printf("Evento recibido: %s (ID: %s)", eventType, deliveryID)
+
+	if eventType != "workflow_run" {
+		ctx.JSON(http.StatusContinue, gin.H{"Message": "Evento no correspondiente a una Action"})
+		return
+	}
 
 	rawData, err := ctx.GetRawData()
 	if err != nil {
@@ -22,24 +27,9 @@ func HandlePullRequestEvent(ctx *gin.Context) {
 		return
 	}
 
-	var msg, webhookURL string
-	switch eventType {
-	case "ping":
-		ctx.JSON(http.StatusOK, gin.H{"status": "pong"})
-		return
-	case "pull_request":
-		msg = application.ProcessPullRequestEvent(rawData)
-	case "push":
-		msg = application.ProcessPullRequestEvent(rawData)
-	case "merge":
-		msg = application.ProcessPullRequestEvent(rawData)
-	default:
-		log.Println("Evento no soportado:", eventType)
-		ctx.JSON(http.StatusOK, gin.H{"status": "Evento ignorado"})
-		return
-	}
+	msg := application.ProcessWorkflowRunEvent(rawData)
 
-	webhookURL = os.Getenv("DISCORD_DEV_WEBHOOK_URL")
+	webhookURL := os.Getenv("DISCORD_TEST_WEBHOOK_URL")
 
 	if msg == "ERROR" || webhookURL == "" {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error procesando evento"})
